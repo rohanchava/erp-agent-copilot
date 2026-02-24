@@ -47,6 +47,15 @@ class DelayRiskRequest(BaseModel):
     order_id: str
 
 
+class ScenarioRequest(BaseModel):
+    sku_id: str
+    history_days: int = 60
+    forecast_days: int = 14
+    demand_multiplier: float = 1.0
+    lead_time_multiplier: float = 1.0
+    replenishment_multiplier: float = 1.0
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -74,6 +83,16 @@ def get_stock_trend(
 @app.get("/analytics/suppliers")
 def supplier_analytics(limit: int = Query(default=5, ge=1, le=20)) -> list[dict[str, Any]]:
     return store.supplier_delay_summary(limit=limit)
+
+
+@app.get("/analytics/overview-timeline")
+def overview_timeline(days: int = Query(default=30, ge=7, le=180)) -> list[dict[str, Any]]:
+    return store.overview_timeline(days=days)
+
+
+@app.get("/analytics/top-movers")
+def top_movers(days: int = Query(default=30, ge=7, le=180), limit: int = Query(default=5, ge=1, le=20)) -> dict[str, Any]:
+    return store.top_movers(days=days, limit=limit)
 
 
 @app.get("/analytics/suppliers/{supplier_id}")
@@ -110,6 +129,18 @@ def predict_stockout(payload: StockoutRequest) -> dict[str, Any]:
 @app.post("/predict/delay")
 def predict_delay(payload: DelayRiskRequest) -> dict[str, Any]:
     return ml.delay_risk(payload.order_id)
+
+
+@app.post("/simulate/stock")
+def simulate_stock(payload: ScenarioRequest) -> dict[str, Any]:
+    return ml.simulate_stock_scenario(
+        sku_id=payload.sku_id.upper(),
+        history_days=payload.history_days,
+        forecast_days=payload.forecast_days,
+        demand_multiplier=payload.demand_multiplier,
+        lead_time_multiplier=payload.lead_time_multiplier,
+        replenishment_multiplier=payload.replenishment_multiplier,
+    )
 
 
 @app.post("/agent/chat", response_model=ChatResponse)

@@ -201,6 +201,86 @@ class ERPStore:
         grouped["avg_days_of_cover"] = grouped["avg_days_of_cover"].round(2)
         return grouped.to_dict("records")
 
+    def overview_timeline(self, days: int = 30) -> list[dict[str, Any]]:
+        cutoff = self._window_start(days)
+        end = pd.Timestamp.today().normalize()
+        timeline = pd.DataFrame({"date": pd.date_range(start=cutoff, end=end, freq="D")})
+
+        recent_orders = self.orders[self.orders["order_date"] >= cutoff].copy()
+        if not recent_orders.empty:
+            recent_orders["fill_rate"] = recent_orders["fulfilled_qty"] / recent_orders["order_qty"]
+            recent_orders["date"] = recent_orders["order_date"].dt.normalize()
+            order_daily = (
+                recent_orders.groupby("date")
+                .agg(
+                    order_count=("order_id", "count"),
+                    open_orders=("status", lambda s: int((s == "OPEN").sum())),
+                    avg_fill_rate=("fill_rate", "mean"),
+                )
+                .reset_index()
+            )
+            timeline = timeline.merge(order_daily, on="date", how="left")
+
+        recent_shipments = self.shipments[self.shipments["shipment_date"] >= cutoff].copy()
+        if not recent_shipments.empty:
+            recent_shipments["is_delayed"] = (
+                recent_shipments["actual_delivery_days"] > recent_shipments["planned_delivery_days"]
+            ).astype(int)
+            recent_shipments["date"] = recent_shipments["shipment_date"].dt.normalize()
+            shipment_daily = (
+                recent_shipments.groupby("date")
+                .agg(
+                    shipment_count=("shipment_id", "count"),
+                    delayed_shipments=("is_delayed", "sum"),
+                    delayed_rate=("is_delayed", "mean"),
+                )
+                .reset_index()
+            )
+            timeline = timeline.merge(shipment_daily, on="date", how="left")
+
+        timeline = timeline.fillna(0)
+        timeline["avg_fill_rate"] = timeline["avg_fill_rate"].round(3)
+        timeline["delayed_rate"] = timeline["delayed_rate"].round(3)
+
+        return [
+            {
+                "date": row["date"].strftime("%Y-%m-%d"),
+                "order_count": int(row["order_count"]),
+                "open_orders": int(row["open_orders"]),
+                "avg_fill_rate": float(row["avg_fill_rate"]),
+                "shipment_count": int(row["shipment_count"]),
+                "delayed_shipments": int(row["delayed_shipments"]),
+                "delayed_rate": float(row["delayed_rate"]),
+            }
+            for _, row in timeline.iterrows()
+        ]
+
+    def top_movers(self, days: int = 30, limit: int = 5) -> dict[str, list[dict[str, Any]]]:
+        rows: list[dict[str, Any]] = []
+        sku_name_map = dict(zip(self.inventory["sku_id"], self.inventory["sku_name"]))
+
+        for sku_id in self.inventory["sku_id"].tolist():
+            perf = self.stock_performance(sku_id, days=days)
+            if perf is None:
+                continue
+            perf["sku_name"] = sku_name_map.get(sku_id, sku_id)
+            rows.append(perf)
+
+        if not rows:
+            return {"gainers": [], "decliners": []}
+
+        df = pd.DataFrame(rows)
+        gainers = df.sort_values("change_pct", ascending=False).head(limit)
+        decliners = df.sort_values("change_pct", ascending=True).head(limit)
+        return {
+            "gainers": gainers[
+                ["sku_id", "sku_name", "change_pct", "change_units", "start_on_hand", "end_on_hand", "window_days"]
+            ].to_dict("records"),
+            "decliners": decliners[
+                ["sku_id", "sku_name", "change_pct", "change_units", "start_on_hand", "end_on_hand", "window_days"]
+            ].to_dict("records"),
+        }
+
     def anomaly_summary(self, days: int = 30, limit: int = 5) -> dict[str, Any]:
         demand = self._demand_anomalies(days=days, limit=limit)
         stock = self._stock_drop_anomalies(days=days, limit=limit)

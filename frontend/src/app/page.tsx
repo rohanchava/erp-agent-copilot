@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Dashboard } from "@/components/Dashboard";
+import { OverviewInsights } from "@/components/OverviewInsights";
 import { fetchKpis } from "@/lib/api";
 
 export default async function OverviewPage() {
@@ -9,6 +10,7 @@ export default async function OverviewPage() {
   return (
     <div className="space-y-5">
       <Dashboard kpis={kpis} />
+      <OverviewInsights />
 
       <section className="grid gap-4 md:grid-cols-3">
         <Link

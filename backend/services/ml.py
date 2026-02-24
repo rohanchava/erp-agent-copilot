@@ -105,7 +105,15 @@ class MLPredictor:
             "drivers": ["supplier_risk", "distance_km", "fill_gap"],
         }
 
-    def stock_trend_with_forecast(self, sku_id: str, history_days: int = 60, forecast_days: int = 14) -> dict[str, Any]:
+    def stock_trend_with_forecast(
+        self,
+        sku_id: str,
+        history_days: int = 60,
+        forecast_days: int = 14,
+        demand_multiplier: float = 1.0,
+        lead_time_multiplier: float = 1.0,
+        replenishment_multiplier: float = 1.0,
+    ) -> dict[str, Any]:
         history = self.store.sku_history(sku_id, days=history_days)
         if history.empty:
             return {"error": f"Unknown sku_id: {sku_id}"}
@@ -124,14 +132,15 @@ class MLPredictor:
 
         future_features = self._time_features(future_idx)
         pred_demand = model.predict(future_features)
-        pred_demand = np.maximum(pred_demand, 1.0)
+        pred_demand = np.maximum(pred_demand * demand_multiplier, 1.0)
 
-        lead_time = max(int(inv["lead_time_days"]), 1)
-        reorder_qty = max(float(inv["daily_demand"]) * lead_time * 2.4, 40.0)
+        lead_time = max(int(round(float(inv["lead_time_days"]) * lead_time_multiplier)), 1)
+        reorder_qty = max(float(inv["daily_demand"]) * lead_time * 2.4 * replenishment_multiplier, 40.0)
 
         running_on_hand = float(history.iloc[-1]["on_hand"])
         forecast_rows: list[dict[str, Any]] = []
         last_date = pd.to_datetime(history.iloc[-1]["date"])
+        runout_date: str | None = None
 
         for i in range(forecast_days):
             # Approximate replenishment cycle: receive stock every lead_time days.
@@ -140,6 +149,8 @@ class MLPredictor:
 
             running_on_hand = max(running_on_hand - float(pred_demand[i]), 0.0)
             point_date = last_date + pd.Timedelta(days=i + 1)
+            if runout_date is None and running_on_hand <= 0:
+                runout_date = point_date.strftime("%Y-%m-%d")
             forecast_rows.append(
                 {
                     "date": point_date.strftime("%Y-%m-%d"),
@@ -166,8 +177,62 @@ class MLPredictor:
             "summary": {
                 "latest_on_hand": int(history_rows[-1]["on_hand"]),
                 "forecast_end_on_hand": int(forecast_rows[-1]["on_hand"]) if forecast_rows else int(history_rows[-1]["on_hand"]),
+                "min_forecast_on_hand": int(min([p["on_hand"] for p in forecast_rows])) if forecast_rows else int(history_rows[-1]["on_hand"]),
                 "avg_predicted_demand": round(float(np.mean(pred_demand)), 2),
+                "safety_stock_estimate": int(round(float(np.mean(pred_demand)) * 7)),
+                "projected_runout_date": runout_date,
             },
+            "assumptions": {
+                "demand_multiplier": round(float(demand_multiplier), 3),
+                "lead_time_multiplier": round(float(lead_time_multiplier), 3),
+                "replenishment_multiplier": round(float(replenishment_multiplier), 3),
+            },
+        }
+
+    def simulate_stock_scenario(
+        self,
+        sku_id: str,
+        history_days: int = 60,
+        forecast_days: int = 14,
+        demand_multiplier: float = 1.15,
+        lead_time_multiplier: float = 1.2,
+        replenishment_multiplier: float = 1.0,
+    ) -> dict[str, Any]:
+        baseline = self.stock_trend_with_forecast(
+            sku_id=sku_id,
+            history_days=history_days,
+            forecast_days=forecast_days,
+            demand_multiplier=1.0,
+            lead_time_multiplier=1.0,
+            replenishment_multiplier=1.0,
+        )
+        if "error" in baseline:
+            return baseline
+
+        scenario = self.stock_trend_with_forecast(
+            sku_id=sku_id,
+            history_days=history_days,
+            forecast_days=forecast_days,
+            demand_multiplier=demand_multiplier,
+            lead_time_multiplier=lead_time_multiplier,
+            replenishment_multiplier=replenishment_multiplier,
+        )
+        if "error" in scenario:
+            return scenario
+
+        baseline_end = int(baseline["summary"]["forecast_end_on_hand"])
+        scenario_end = int(scenario["summary"]["forecast_end_on_hand"])
+        min_scenario = int(scenario["summary"]["min_forecast_on_hand"])
+
+        return {
+            "sku_id": sku_id,
+            "history_days": history_days,
+            "forecast_days": forecast_days,
+            "baseline": baseline,
+            "scenario": scenario,
+            "delta_vs_baseline_end_on_hand": scenario_end - baseline_end,
+            "scenario_min_on_hand": min_scenario,
+            "scenario_runout_date": scenario["summary"]["projected_runout_date"],
         }
 
     @staticmethod

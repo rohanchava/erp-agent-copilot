@@ -32,8 +32,22 @@ export type StockTrendResponse = {
   summary: {
     latest_on_hand: number;
     forecast_end_on_hand: number;
+    min_forecast_on_hand: number;
     avg_predicted_demand: number;
+    safety_stock_estimate: number;
+    projected_runout_date: string | null;
   };
+};
+
+export type ScenarioResponse = {
+  sku_id: string;
+  history_days: number;
+  forecast_days: number;
+  baseline: StockTrendResponse;
+  scenario: StockTrendResponse;
+  delta_vs_baseline_end_on_hand: number;
+  scenario_min_on_hand: number;
+  scenario_runout_date: string | null;
 };
 
 export type AnomalyResponse = {
@@ -41,6 +55,26 @@ export type AnomalyResponse = {
   demand_spikes: Array<{ date: string; sku_id: string; demand_qty: number; z_score: number }>;
   stock_drops: Array<{ sku_id: string; start_on_hand: number; end_on_hand: number; drop_pct: number }>;
   supplier_delivery_risk: Array<{ supplier_id: string; late_rate: number; avg_late_days: number; po_count: number; risk_score: number }>;
+};
+
+export type OverviewTimelinePoint = {
+  date: string;
+  order_count: number;
+  open_orders: number;
+  avg_fill_rate: number;
+  shipment_count: number;
+  delayed_shipments: number;
+  delayed_rate: number;
+};
+
+export type MoverRow = {
+  sku_id: string;
+  sku_name: string;
+  change_pct: number;
+  change_units: number;
+  start_on_hand: number;
+  end_on_hand: number;
+  window_days: number;
 };
 
 export async function fetchKpis(): Promise<KPIResponse> {
@@ -64,9 +98,45 @@ export async function fetchStockTrend(skuId: string, historyDays = 60, forecastD
   return r.json();
 }
 
+export async function simulateStockScenario(params: {
+  skuId: string;
+  historyDays: number;
+  forecastDays: number;
+  demandMultiplier: number;
+  leadTimeMultiplier: number;
+  replenishmentMultiplier: number;
+}): Promise<ScenarioResponse> {
+  const r = await fetch(`${API_BASE}/simulate/stock`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sku_id: params.skuId,
+      history_days: params.historyDays,
+      forecast_days: params.forecastDays,
+      demand_multiplier: params.demandMultiplier,
+      lead_time_multiplier: params.leadTimeMultiplier,
+      replenishment_multiplier: params.replenishmentMultiplier
+    })
+  });
+  if (!r.ok) throw new Error("Failed to simulate stock scenario");
+  return r.json();
+}
+
 export async function fetchAnomalies(days = 30, limit = 5): Promise<AnomalyResponse> {
   const r = await fetch(`${API_BASE}/analytics/anomalies?days=${days}&limit=${limit}`, { cache: "no-store" });
   if (!r.ok) throw new Error("Failed to fetch anomaly analytics");
+  return r.json();
+}
+
+export async function fetchOverviewTimeline(days = 30): Promise<OverviewTimelinePoint[]> {
+  const r = await fetch(`${API_BASE}/analytics/overview-timeline?days=${days}`, { cache: "no-store" });
+  if (!r.ok) throw new Error("Failed to fetch overview timeline");
+  return r.json();
+}
+
+export async function fetchTopMovers(days = 30, limit = 5): Promise<{ gainers: MoverRow[]; decliners: MoverRow[] }> {
+  const r = await fetch(`${API_BASE}/analytics/top-movers?days=${days}&limit=${limit}`, { cache: "no-store" });
+  if (!r.ok) throw new Error("Failed to fetch top movers");
   return r.json();
 }
 
