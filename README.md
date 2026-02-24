@@ -1,22 +1,65 @@
-# ERP Agent Copilot (Learning Project)
+# ERP Agent Copilot
 
-A local full-stack project to learn how to build an ERP/WMS data copilot with synthetic data, ML predictions, and an agent-style interface.
+Agentic ERP/WMS copilot with synthetic enterprise data, ML risk forecasting, and interactive stock trend predictions.
 
-## Stack
-- Frontend: Next.js + TypeScript + Tailwind + Framer Motion
-- Backend: FastAPI + Pandas + scikit-learn
-- Data: synthetic ERP tables (`inventory`, `orders`, `shipments`, `purchase_orders`)
+## Why This Project
+ERP and warehouse systems usually require digging through many screens for routine operational decisions. This project provides a chat-first interface that can:
+- answer operational questions,
+- surface KPIs and risk signals,
+- show transparent tool traces,
+- visualize inventory trends with forecasts.
 
-## Project layout
-- `frontend/`: chat-first dashboard UI
-- `backend/`: API, tool-routing agent, ML predictors
-- `data/`: synthetic ERP generator and generated CSV files
+It is designed as a learning project for full-stack ML applications.
 
-## Quick start
-1. Generate synthetic data
+## Features
+- Agentic Q&A for ERP/WMS-style operations
+- KPI dashboard (`open orders`, `delayed shipments`, `fill rate`, `low stock`, `warehouses`)
+- Stockout risk prediction per SKU
+- Delay risk prediction for orders
+- Supplier delay analytics and warehouse cover-risk analytics
+- Inventory trend + forecast chart (history vs projected stock)
+- Synthetic data generator for repeatable local development
+
+## Tech Stack
+- Frontend: Next.js (App Router), TypeScript, Tailwind CSS, Framer Motion
+- Backend: FastAPI, Pandas, scikit-learn
+- ML:
+  - Logistic Regression for stockout risk
+  - Logistic Regression for delay risk
+  - Time-series feature regression for SKU demand forecasting
+- Data: generated CSV datasets (inventory, orders, shipments, supplier POs, inventory history, warehouse inventory)
+
+## Architecture
+```text
+Frontend (Next.js)
+  -> /agent/chat
+  -> /kpis
+  -> /predict/*
+  -> /trends/stock/{sku}
+
+Backend (FastAPI)
+  -> ERPStore (data access + analytics tools)
+  -> MLPredictor (risk + forecast models)
+  -> Agent Router (intent routing + tool traces)
+
+Data Layer
+  -> Synthetic ERP/WMS generator
+  -> CSV datasets in data/generated/
+```
+
+## Project Structure
+```text
+erp-agent-copilot/
+  frontend/      # UI dashboard + chat + trend visualization
+  backend/       # FastAPI routes, agent logic, ML services
+  data/          # Synthetic data generation and generated datasets
+```
+
+## Quickstart
+1. Generate data
 ```bash
 cd data
-python3 generate_data.py
+../backend/.venv/bin/python generate_data.py
 ```
 
 2. Run backend
@@ -35,18 +78,39 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+4. Open app
+```text
+http://localhost:3000
+```
 
-## Try these prompts
+## Demo Questions
 - `Give me a KPI summary`
 - `Which SKU has highest stockout risk?`
+- `Give stockout risk for SKU-1008`
 - `Which suppliers are most delayed?`
-- `Which warehouse has lowest cover risk?`
-- `Forecast SKU-1008 trend for next 14 days`
+- `Which warehouse has lowest inventory cover risk?`
+- `Forecast trend for SKU-1008`
 
-## Learning roadmap
-1. Replace rule-based agent routing with LLM tool-calling.
-2. Add warehouse location dimension and per-site forecasting.
-3. Add SQL layer + query policy guardrails.
-4. Add auth + row-level security.
-5. Add model eval notebook and drift checks.
+## API Endpoints
+- `GET /health`
+- `GET /kpis`
+- `GET /skus`
+- `GET /trends/stock/{sku_id}`
+- `GET /analytics/suppliers`
+- `GET /analytics/warehouses`
+- `POST /predict/stockout`
+- `POST /predict/delay`
+- `POST /agent/chat`
+
+## Learning Notes
+This project intentionally starts with rule-based intent routing for transparency and speed. A natural next step is replacing it with real LLM tool-calling while keeping the same tool interfaces.
+
+## Roadmap
+1. Replace rule-based router with LLM tool-calling agent.
+2. Add SQL semantic layer and query guardrails.
+3. Add auth and row-level security.
+4. Add model evaluation, monitoring, and drift checks.
+5. Add real ERP connector adapters (NetSuite/SAP/Odoo).
+
+## License
+For learning and portfolio use.
