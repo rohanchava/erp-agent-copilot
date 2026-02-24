@@ -4,9 +4,11 @@
 @tailwind utilities;
 
 :root {
-  --bg-1: #f8fbff;
-  --bg-2: #ecf8ff;
   --ink: #0f172a;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
@@ -14,8 +16,21 @@ body {
   font-family: Manrope, system-ui, sans-serif;
   color: var(--ink);
   background:
-    radial-gradient(circle at 20% 10%, rgba(37, 99, 235, 0.16), transparent 40%),
-    radial-gradient(circle at 80% 20%, rgba(0, 169, 165, 0.16), transparent 32%),
-    linear-gradient(135deg, var(--bg-1), var(--bg-2));
+    radial-gradient(circle at 14% 12%, rgba(34, 211, 238, 0.25), transparent 35%),
+    radial-gradient(circle at 80% 18%, rgba(249, 115, 22, 0.18), transparent 34%),
+    linear-gradient(145deg, #f2f7ff, #ecfeff 45%, #eef6ff);
   min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(circle at center, black 60%, transparent 100%);
+  z-index: -1;
 }

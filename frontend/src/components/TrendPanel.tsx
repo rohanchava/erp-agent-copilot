@@ -86,7 +86,7 @@ export function TrendPanel() {
   }, [trend]);
 
   return (
-    <section className="mt-6 rounded-3xl border border-white/70 bg-white/85 p-5 shadow-md backdrop-blur">
+    <section className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-md backdrop-blur">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="font-heading text-lg">Inventory Trend + Forecast</h2>

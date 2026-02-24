@@ -36,6 +36,13 @@ export type StockTrendResponse = {
   };
 };
 
+export type AnomalyResponse = {
+  window_days: number;
+  demand_spikes: Array<{ date: string; sku_id: string; demand_qty: number; z_score: number }>;
+  stock_drops: Array<{ sku_id: string; start_on_hand: number; end_on_hand: number; drop_pct: number }>;
+  supplier_delivery_risk: Array<{ supplier_id: string; late_rate: number; avg_late_days: number; po_count: number; risk_score: number }>;
+};
+
 export async function fetchKpis(): Promise<KPIResponse> {
   const r = await fetch(`${API_BASE}/kpis`, { cache: "no-store" });
   if (!r.ok) throw new Error("Failed to fetch KPIs");
@@ -54,6 +61,12 @@ export async function fetchStockTrend(skuId: string, historyDays = 60, forecastD
     { cache: "no-store" }
   );
   if (!r.ok) throw new Error("Failed to fetch stock trend");
+  return r.json();
+}
+
+export async function fetchAnomalies(days = 30, limit = 5): Promise<AnomalyResponse> {
+  const r = await fetch(`${API_BASE}/analytics/anomalies?days=${days}&limit=${limit}`, { cache: "no-store" });
+  if (!r.ok) throw new Error("Failed to fetch anomaly analytics");
   return r.json();
 }
 

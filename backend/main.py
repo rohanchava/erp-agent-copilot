@@ -76,9 +76,30 @@ def supplier_analytics(limit: int = Query(default=5, ge=1, le=20)) -> list[dict[
     return store.supplier_delay_summary(limit=limit)
 
 
+@app.get("/analytics/suppliers/{supplier_id}")
+def supplier_performance(supplier_id: str, days: int = Query(default=30, ge=7, le=180)) -> dict[str, Any]:
+    perf = store.supplier_performance(supplier_id.upper(), days=days)
+    if perf is None:
+        return {"error": f"Unknown supplier or no data in last {days} days: {supplier_id}"}
+    return perf
+
+
 @app.get("/analytics/warehouses")
 def warehouse_analytics(limit: int = Query(default=5, ge=1, le=20)) -> list[dict[str, Any]]:
     return store.warehouse_low_cover(limit=limit)
+
+
+@app.get("/analytics/anomalies")
+def anomaly_analytics(days: int = Query(default=30, ge=7, le=180), limit: int = Query(default=5, ge=1, le=20)) -> dict[str, Any]:
+    return store.anomaly_summary(days=days, limit=limit)
+
+
+@app.get("/analytics/stock-performance/{sku_id}")
+def stock_performance(sku_id: str, days: int = Query(default=30, ge=7, le=180)) -> dict[str, Any]:
+    perf = store.stock_performance(sku_id.upper(), days=days)
+    if perf is None:
+        return {"error": f"Unknown sku_id or no data in last {days} days: {sku_id}"}
+    return perf
 
 
 @app.post("/predict/stockout")

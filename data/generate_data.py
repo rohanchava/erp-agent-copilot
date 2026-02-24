@@ -11,6 +11,12 @@ WAREHOUSES = ["WH-EAST", "WH-WEST", "WH-CENTRAL", "WH-SOUTH"]
 SUPPLIERS = [f"SUP-{i}" for i in range(1, 11)]
 
 
+def random_dates(n: int, lookback_days: int = 180) -> pd.Series:
+    end = pd.Timestamp.today().normalize()
+    offsets = RNG.integers(0, lookback_days, size=n)
+    return pd.Series(end - pd.to_timedelta(offsets, unit="D"))
+
+
 def simulate_inventory_history(n_skus: int = 60, days: int = 120) -> tuple[pd.DataFrame, pd.DataFrame]:
     sku_ids = [f"SKU-{1000 + i}" for i in range(n_skus)]
     dates = pd.date_range(end=pd.Timestamp.today().normalize(), periods=days, freq="D")
@@ -92,10 +98,12 @@ def make_orders(inventory: pd.DataFrame, n: int = 700) -> pd.DataFrame:
 
     delay_signal = 0.5 * supplier_risk + 0.35 * (distance_km / 5000) + 0.15 * (1 - fulfilled_ratio)
     is_delayed = (delay_signal > 0.58).astype(int)
+    order_dates = random_dates(n=n, lookback_days=150)
 
     return pd.DataFrame(
         {
             "order_id": [f"ORD-{1000 + i}" for i in range(n)],
+            "order_date": order_dates.dt.strftime("%Y-%m-%d"),
             "sku_id": RNG.choice(sku_choices, size=n),
             "warehouse_id": RNG.choice(WAREHOUSES, size=n),
             "supplier_id": RNG.choice(SUPPLIERS, size=n),
@@ -113,9 +121,11 @@ def make_shipments(n: int = 350) -> pd.DataFrame:
     planned = RNG.integers(2, 20, size=n)
     slippage = RNG.integers(-1, 10, size=n)
     actual = np.maximum(planned + slippage, 1)
+    shipment_dates = random_dates(n=n, lookback_days=150)
     return pd.DataFrame(
         {
             "shipment_id": [f"SHP-{9000 + i}" for i in range(n)],
+            "shipment_date": shipment_dates.dt.strftime("%Y-%m-%d"),
             "planned_delivery_days": planned,
             "actual_delivery_days": actual,
             "carrier": RNG.choice(["DHL", "FedEx", "UPS", "Maersk"], size=n),
@@ -127,10 +137,16 @@ def make_shipments(n: int = 350) -> pd.DataFrame:
 def make_purchase_orders(n: int = 260) -> pd.DataFrame:
     expected = RNG.integers(5, 35, size=n)
     actual = np.maximum(expected + RNG.integers(-2, 12, size=n), 1)
+    po_dates = random_dates(n=n, lookback_days=180)
+    expected_delivery = po_dates + pd.to_timedelta(expected, unit="D")
+    actual_delivery = po_dates + pd.to_timedelta(actual, unit="D")
 
     return pd.DataFrame(
         {
             "po_id": [f"PO-{5000 + i}" for i in range(n)],
+            "po_date": po_dates.dt.strftime("%Y-%m-%d"),
+            "expected_delivery_date": expected_delivery.dt.strftime("%Y-%m-%d"),
+            "actual_delivery_date": actual_delivery.dt.strftime("%Y-%m-%d"),
             "supplier_id": RNG.choice(SUPPLIERS, size=n),
             "expected_days": expected,
             "actual_days": actual,

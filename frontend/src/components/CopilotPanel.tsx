@@ -111,7 +111,7 @@ export function CopilotPanel() {
       <div className="lg:col-span-3 rounded-3xl border border-white/70 bg-white/85 p-5 shadow-md backdrop-blur">
         <h2 className="font-heading text-lg">ERP Agent</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Ask KPI, inventory, stockout, supplier-delay, warehouse-risk, or trend questions (example: forecast SKU-1008).
+          Ask KPI, anomalies, supplier delivery, stock performance by timeframe, stockout risk, and forecast questions.
         </p>
 
         <form className="mt-4 flex gap-2" onSubmit={onAsk}>
@@ -145,12 +145,16 @@ export function CopilotPanel() {
                           ? "bg-amber-100 text-amber-800"
                           : intent === "delay_risk"
                             ? "bg-rose-100 text-rose-700"
-                            : intent === "supplier_delay_analysis"
+                            : intent === "supplier_delivery_analysis"
                               ? "bg-violet-100 text-violet-700"
                               : intent === "warehouse_risk"
                                 ? "bg-fuchsia-100 text-fuchsia-700"
                                 : intent === "trend_forecast"
                                   ? "bg-orange-100 text-orange-700"
+                                  : intent === "stock_performance"
+                                    ? "bg-cyan-100 text-cyan-700"
+                                    : intent === "anomaly_detection"
+                                      ? "bg-red-100 text-red-700"
                             : "bg-slate-200 text-slate-700"
                   }`}
                 >

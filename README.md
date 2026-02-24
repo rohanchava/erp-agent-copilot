@@ -14,6 +14,7 @@ It is designed as a learning project for full-stack ML applications.
 ## Features
 - Agentic Q&A for ERP/WMS-style operations
 - KPI dashboard (`open orders`, `delayed shipments`, `fill rate`, `low stock`, `warehouses`)
+- Anomaly analytics (demand spikes, stock drops, supplier delivery risk)
 - Stockout risk prediction per SKU
 - Delay risk prediction for orders
 - Supplier delay analytics and warehouse cover-risk analytics
@@ -88,6 +89,9 @@ http://localhost:3000
 - `Which SKU has highest stockout risk?`
 - `Give stockout risk for SKU-1008`
 - `Which suppliers are most delayed?`
+- `How are supplier 3 deliveries in last 60 days?`
+- `How has SKU-1008 been performing stock wise in last 45 days?`
+- `What anomalies did we see in last 30 days?`
 - `Which warehouse has lowest inventory cover risk?`
 - `Forecast trend for SKU-1008`
 
@@ -97,7 +101,10 @@ http://localhost:3000
 - `GET /skus`
 - `GET /trends/stock/{sku_id}`
 - `GET /analytics/suppliers`
+- `GET /analytics/suppliers/{supplier_id}`
 - `GET /analytics/warehouses`
+- `GET /analytics/anomalies`
+- `GET /analytics/stock-performance/{sku_id}`
 - `POST /predict/stockout`
 - `POST /predict/delay`
 - `POST /agent/chat`
