@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Node
+node_modules/
+.next/
+out/
+
+# Data artifacts
+*.log
+.DS_Store
