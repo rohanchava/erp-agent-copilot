@@ -11,3 +11,5 @@ out/
 # Data artifacts
 *.log
 .DS_Store
+
+.next_stale_*
