@@ -84,6 +84,19 @@ npm run dev
 http://localhost:3000
 ```
 
+## LLM Tool-Calling Agent (Optional)
+The backend now supports OpenAI tool-calling for more flexible natural-language questions.
+
+Set environment variables before starting backend:
+```bash
+export OPENAI_API_KEY=your_key_here
+export LLM_AGENT_MODEL=gpt-4o-mini
+```
+
+Optional controls:
+- `DISABLE_LLM_AGENT=1` forces rule-based fallback
+- If no `OPENAI_API_KEY` is present, app automatically uses rule-based agent
+
 ## Demo Questions
 - `Give me a KPI summary`
 - `Which SKU has highest stockout risk?`
@@ -107,17 +120,17 @@ http://localhost:3000
 - `GET /analytics/stock-performance/{sku_id}`
 - `POST /predict/stockout`
 - `POST /predict/delay`
+- `POST /simulate/stock`
 - `POST /agent/chat`
 
 ## Learning Notes
-This project intentionally starts with rule-based intent routing for transparency and speed. A natural next step is replacing it with real LLM tool-calling while keeping the same tool interfaces.
+This project now supports LLM tool-calling with a safe rule-based fallback so development stays stable without external API keys.
 
 ## Roadmap
-1. Replace rule-based router with LLM tool-calling agent.
-2. Add SQL semantic layer and query guardrails.
-3. Add auth and row-level security.
-4. Add model evaluation, monitoring, and drift checks.
-5. Add real ERP connector adapters (NetSuite/SAP/Odoo).
+1. Add SQL semantic layer and query guardrails.
+2. Add auth and row-level security.
+3. Add model evaluation, monitoring, and drift checks.
+4. Add real ERP connector adapters (NetSuite/SAP/Odoo).
 
 ## License
 For learning and portfolio use.

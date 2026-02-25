@@ -155,6 +155,8 @@ export function CopilotPanel() {
                                     ? "bg-cyan-100 text-cyan-700"
                                     : intent === "anomaly_detection"
                                       ? "bg-red-100 text-red-700"
+                                      : intent === "improvement_priorities"
+                                        ? "bg-indigo-100 text-indigo-700"
                             : "bg-slate-200 text-slate-700"
                   }`}
                 >

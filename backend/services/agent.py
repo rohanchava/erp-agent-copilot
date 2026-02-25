@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from typing import Any
 
@@ -45,7 +46,7 @@ def _extract_days(question: str, default: int = 30) -> int:
     return default
 
 
-def answer_with_agent(question: str, store: ERPStore, ml: MLPredictor) -> dict[str, Any]:
+def _rule_based_answer(question: str, store: ERPStore, ml: MLPredictor) -> dict[str, Any]:
     q = question.lower()
     traces: list[dict[str, Any]] = []
     sku_id = _extract_sku(q)
@@ -95,7 +96,7 @@ def answer_with_agent(question: str, store: ERPStore, ml: MLPredictor) -> dict[s
             "intent": "stock_performance",
             "answer": (
                 f"{sku_id} stock has {direction} over the last {days} days: {perf['start_on_hand']} -> {perf['end_on_hand']} "
-                f"({perf['change_pct']}%). Average on-hand was {perf['avg_on_hand']}."
+                f"({perf['change_pct']}%). Average on-hand was {perf['avg_on_hand']}"
             ),
             "traces": traces,
         }
@@ -143,6 +144,41 @@ def answer_with_agent(question: str, store: ERPStore, ml: MLPredictor) -> dict[s
             "answer": (
                 f"Lowest inventory cover is at {worst['warehouse_id']} (avg cover {worst['avg_days_of_cover']} days). "
                 f"Total on hand there: {worst['total_on_hand']} units."
+            ),
+            "traces": traces,
+        }
+
+    if "improv" in q or "focus area" in q or "what should we work on" in q:
+        kpis = store.kpis()
+        anomalies = store.anomaly_summary(days=30, limit=3)
+        supplier = store.supplier_delay_summary(limit=1, days=30)
+        warehouse = store.warehouse_low_cover(limit=1)
+
+        traces.append({"tool": "kpis", "input": {}, "output": kpis})
+        traces.append({"tool": "anomaly_summary", "input": {"days": 30, "limit": 3}, "output": anomalies})
+        traces.append({"tool": "supplier_delay_summary", "input": {"days": 30, "limit": 1}, "output": supplier})
+        traces.append({"tool": "warehouse_low_cover", "input": {"limit": 1}, "output": warehouse})
+
+        supplier_note = (
+            f"{supplier[0]['supplier_id']} ({round(float(supplier[0]['late_rate']) * 100, 1)}% late rate)"
+            if supplier
+            else "N/A"
+        )
+        warehouse_note = (
+            f"{warehouse[0]['warehouse_id']} ({warehouse[0]['avg_days_of_cover']} days cover)"
+            if warehouse
+            else "N/A"
+        )
+        top_drop = anomalies["stock_drops"][0]["sku_id"] if anomalies["stock_drops"] else "N/A"
+
+        return {
+            "intent": "improvement_priorities",
+            "answer": (
+                "Top improvement areas: "
+                f"1) fulfillment reliability (delayed shipments: {kpis['delayed_shipments']}), "
+                f"2) inventory health (low-stock SKUs: {kpis['low_stock_skus']}, biggest recent drop: {top_drop}), "
+                f"3) supplier performance (highest risk supplier: {supplier_note}), "
+                f"4) warehouse coverage balance (lowest cover warehouse: {warehouse_note})."
             ),
             "traces": traces,
         }
@@ -216,7 +252,7 @@ def answer_with_agent(question: str, store: ERPStore, ml: MLPredictor) -> dict[s
             "intent": "inventory_lookup",
             "answer": (
                 f"The most stocked item is {top['sku_id']} ({top['sku_name']}) with {top['on_hand']} units on hand. "
-                f"Next are {items[1]['sku_id']} and {items[2]['sku_id']}."
+                f"Next are {items[1]['sku_id']} and {items[2]['sku_id']}"
             ),
             "traces": traces,
         }
@@ -231,3 +267,17 @@ def answer_with_agent(question: str, store: ERPStore, ml: MLPredictor) -> dict[s
         ),
         "traces": traces,
     }
+
+
+def answer_with_agent(question: str, store: ERPStore, ml: MLPredictor) -> dict[str, Any]:
+    if os.getenv("OPENAI_API_KEY") and os.getenv("DISABLE_LLM_AGENT", "0") != "1":
+        try:
+            from services.llm_agent import answer_with_llm_tools
+
+            return answer_with_llm_tools(question=question, store=store, ml=ml)
+        except Exception as exc:
+            result = _rule_based_answer(question=question, store=store, ml=ml)
+            result["traces"] = [{"tool": "llm_fallback", "input": {}, "output": str(exc)}, *result.get("traces", [])]
+            return result
+
+    return _rule_based_answer(question=question, store=store, ml=ml)
