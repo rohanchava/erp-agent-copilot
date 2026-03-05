@@ -67,7 +67,7 @@ def _rule_based_answer(question: str, store: ERPStore, ml: MLPredictor) -> dict[
 
     sku = sku_id  # alias used in the demand_anomaly branch below
 
-    if any(w in q for w in ["demand anomal", "demand spike", "unusual demand", "abnormal demand"]) and sku:
+    if any(w in q for w in ["demand anomal", "demand anomol", "demand spike", "unusual demand", "abnormal demand"]) and sku:
         intent = "demand_anomaly"
         data = ml.demand_anomaly_scan(sku, days=days)
         count = data.get("anomaly_count", 0)
@@ -82,7 +82,7 @@ def _rule_based_answer(question: str, store: ERPStore, ml: MLPredictor) -> dict[
         traces = [{"tool": "get_demand_anomalies", "input": {"sku_id": sku, "days": days}, "output": data}]
         return {"intent": intent, "answer": answer, "traces": traces}
 
-    if "anomal" in q or "outlier" in q or "spike" in q or "abnormal" in q:
+    if "anomal" in q or "anomol" in q or "outlier" in q or "spike" in q or "abnormal" in q:
         anomalies = store.anomaly_summary(days=days, limit=5)
         traces.append({"tool": "anomaly_summary", "input": {"days": days, "limit": 5}, "output": anomalies})
 

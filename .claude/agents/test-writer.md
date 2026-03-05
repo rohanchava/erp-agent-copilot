@@ -74,11 +74,37 @@ test("shows empty state", () => {
 cd frontend && npx vitest run
 ```
 
+## Agent Intent Routing — MUST TEST
+Every new rule-based intent in `backend/services/agent.py` needs a test that verifies:
+1. **Exact phrasing** — the documented demo question routes to the correct intent
+2. **Typo/variant phrasing** — common misspellings or alternate wordings also route correctly (not to `fallback`)
+3. **Fallback does NOT trigger** for any query that clearly matches an intent
+
+```python
+def test_agent_demand_anomaly_intent():
+    r = client.post("/agent/chat", json={"question": "show demand anomalies for SKU-1008"})
+    assert r.status_code == 200
+    assert r.json()["intent"] == "demand_anomaly"
+
+def test_agent_demand_anomaly_typo():
+    # Common misspelling: "anomolies" instead of "anomalies"
+    r = client.post("/agent/chat", json={"question": "show demand anomolies for SKU-1008"})
+    assert r.status_code == 200
+    assert r.json()["intent"] == "demand_anomaly", "Typo should not fall through to fallback"
+
+def test_agent_does_not_fallback_for_known_intent():
+    r = client.post("/agent/chat", json={"question": "show demand anomalies for SKU-1000"})
+    assert r.json()["intent"] != "fallback"
+```
+
+**Rule:** whenever a new intent is added to `agent.py`, add at least 2 agent chat tests: one exact, one with a realistic variant. The `fallback` intent in a response is a bug signal.
+
 ## Priorities
 1. Backend endpoint happy path + 404 for every route
-2. `chartHelpers.ts` pure functions
-3. Component empty states and loading skeletons
-4. Store methods: `reorder_recommendations`, `stock_performance`, `anomaly_summary`
+2. Agent intent routing — exact + typo/variant for every intent
+3. `chartHelpers.ts` pure functions
+4. Component empty states and loading skeletons
+5. Store methods: `reorder_recommendations`, `stock_performance`, `anomaly_summary`
 
 ## Never do
 - Snapshot tests (too brittle)
