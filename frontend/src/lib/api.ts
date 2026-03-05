@@ -196,6 +196,38 @@ export async function fetchSkuProfile(skuId: string): Promise<SkuProfile> {
   return r.json();
 }
 
+export type DemandAnomaly = {
+  date: string;
+  demand_qty: number;
+  mean_demand: number;
+  std_demand: number;
+  z_score: number;
+  severity: "HIGH" | "MEDIUM" | "LOW";
+};
+
+export type DemandAnomalyResponse = {
+  sku_id: string;
+  window_days: number;
+  z_threshold: number;
+  baseline_mean: number;
+  baseline_std: number;
+  anomaly_count: number;
+  anomalies: DemandAnomaly[];
+};
+
+export async function fetchDemandAnomalies(
+  skuId: string,
+  days = 30,
+  zThreshold = 2.0
+): Promise<DemandAnomalyResponse> {
+  const r = await fetch(
+    `${API_BASE}/skus/${encodeURIComponent(skuId)}/demand-anomalies?days=${days}&z_threshold=${zThreshold}`,
+    { cache: "no-store" }
+  );
+  if (!r.ok) throw new Error(`Failed to fetch demand anomalies for ${skuId}`);
+  return r.json();
+}
+
 export async function stockoutPredict(skuId: string, horizonDays: number) {
   const r = await fetch(`${API_BASE}/predict/stockout`, {
     method: "POST",

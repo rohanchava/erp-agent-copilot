@@ -96,6 +96,18 @@ def sku_profile(sku_id: str) -> dict[str, Any]:
     }
 
 
+@app.get("/skus/{sku_id}/demand-anomalies")
+def sku_demand_anomalies(
+    sku_id: str,
+    days: int = Query(default=30, ge=7, le=180),
+    z_threshold: float = Query(default=2.0, ge=1.0, le=4.0),
+) -> dict[str, Any]:
+    result = ml.demand_anomaly_scan(sku_id.upper(), days=days, z_threshold=z_threshold)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+
 @app.get("/analytics/suppliers")
 def supplier_analytics(limit: int = Query(default=5, ge=1, le=20)) -> list[dict[str, Any]]:
     return store.supplier_delay_summary(limit=limit)

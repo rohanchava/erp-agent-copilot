@@ -141,6 +141,22 @@ def _tool_schemas() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
+                "name": "get_demand_anomalies",
+                "description": "Detect demand anomalies for a specific SKU using Z-score analysis against historical baseline. Use when asked about unusual demand, demand spikes, or abnormal patterns for a specific SKU.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "sku_id": {"type": "string", "description": "SKU identifier e.g. SKU-1000"},
+                        "days": {"type": "integer", "minimum": 7, "maximum": 180, "description": "Window of recent days to scan (default 30)"},
+                        "z_threshold": {"type": "number", "minimum": 1.0, "maximum": 4.0, "description": "Z-score threshold for flagging anomalies (default 2.0)"},
+                    },
+                    "required": ["sku_id"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "simulate_stock_scenario",
                 "description": "Run what-if simulation with demand/lead-time/replenishment multipliers.",
                 "parameters": {
@@ -172,6 +188,7 @@ def _intent_from_tool(tool_name: str) -> str:
         "get_stock_trend": "trend_forecast",
         "simulate_stock_scenario": "scenario_simulation",
         "get_reorder_recommendations": "reorder_recommendations",
+        "get_demand_anomalies": "demand_anomaly",
     }
     return mapping.get(tool_name, "llm_tooling")
 
@@ -225,6 +242,12 @@ def answer_with_llm_tools(question: str, store: ERPStore, ml: MLPredictor) -> di
                 demand_multiplier=float(args.get("demand_multiplier", 1.0)),
                 lead_time_multiplier=float(args.get("lead_time_multiplier", 1.0)),
                 replenishment_multiplier=float(args.get("replenishment_multiplier", 1.0)),
+            )
+        elif name == "get_demand_anomalies":
+            return ml.demand_anomaly_scan(
+                args.get("sku_id", ""),
+                days=int(args.get("days", 30)),
+                z_threshold=float(args.get("z_threshold", 2.0)),
             )
         return {"error": f"Unknown tool: {name}"}
 

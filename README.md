@@ -18,7 +18,8 @@ Designed as a learning project for full-stack ML applications.
 - **Reorder recommendations** — ROP-based signals with safety stock, reorder qty, suggested order date, confidence (HIGH/MEDIUM/LOW), urgency score
 - **Inventory trends + what-if simulator** — history vs projected stock chart, scenario sliders for demand / lead-time / replenishment multipliers, baseline vs scenario overlay
 - **SKU catalog** — searchable list of all SKUs with on-hand and days-of-cover
-- **SKU detail page** — per-SKU profile with 6 KPI cards, trend chart, scenario simulation, stockout risk card, and reorder signal card
+- **SKU detail page** — per-SKU profile with 6 KPI cards, trend chart, scenario simulation, stockout risk card, reorder signal card, and demand anomaly feed
+- **Per-SKU demand anomaly detection** — Z-score analysis vs full-history baseline; HIGH/MEDIUM/LOW severity; configurable window and threshold
 - **Stockout risk prediction** per SKU (logistic regression, configurable horizon)
 - **Delay risk prediction** for orders
 - **Supplier analytics** — delay rates, avg late days, on-time rate
@@ -127,6 +128,7 @@ export LLM_AGENT_MODEL=gpt-4o-mini   # default
 - `GET /kpis`
 - `GET /skus`
 - `GET /skus/{sku_id}/profile`
+- `GET /skus/{sku_id}/demand-anomalies`
 
 ### Trends + Simulation
 - `GET /trends/stock/{sku_id}`
@@ -157,6 +159,7 @@ export LLM_AGENT_MODEL=gpt-4o-mini   # default
 - `How are supplier 3 deliveries in last 60 days?`
 - `How has SKU-1008 been performing stock-wise in the last 45 days?`
 - `What anomalies did we see in the last 30 days?`
+- `Show demand anomalies for SKU-1008`
 - `Which warehouse has the lowest inventory cover risk?`
 - `Forecast trend for SKU-1008`
 

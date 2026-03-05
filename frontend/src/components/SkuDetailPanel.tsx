@@ -7,9 +7,11 @@ import {
   fetchStockTrend,
   stockoutPredict,
   simulateStockScenario,
+  fetchDemandAnomalies,
   SkuProfile,
   StockTrendResponse,
   ScenarioResponse,
+  DemandAnomalyResponse,
 } from "@/lib/api";
 import { buildPath, chartSeries, splitChart } from "@/lib/chartHelpers";
 
@@ -52,6 +54,7 @@ export function SkuDetailPanel({ skuId }: Props) {
   const [profile, setProfile] = useState<SkuProfile | null>(null);
   const [trend, setTrend] = useState<StockTrendResponse | null>(null);
   const [stockout, setStockout] = useState<Record<string, unknown> | null>(null);
+  const [anomalies, setAnomalies] = useState<DemandAnomalyResponse | null>(null);
 
   const [historyDays, setHistoryDays] = useState(60);
   const [forecastDays, setForecastDays] = useState(14);
@@ -72,10 +75,12 @@ export function SkuDetailPanel({ skuId }: Props) {
     Promise.all([
       fetchSkuProfile(skuId),
       stockoutPredict(skuId, 14),
+      fetchDemandAnomalies(skuId, 30),
     ])
-      .then(([prof, so]) => {
+      .then(([prof, so, anom]) => {
         setProfile(prof);
         setStockout(so);
+        setAnomalies(anom);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load SKU data"))
       .finally(() => setLoading(false));
@@ -302,8 +307,8 @@ export function SkuDetailPanel({ skuId }: Props) {
         )}
       </div>
 
-      {/* Bottom row: Stockout Risk + Reorder Signal */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Bottom row: Stockout Risk + Reorder Signal + Demand Anomalies */}
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Stockout Risk */}
         <div className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-md backdrop-blur">
           <h2 className="font-heading text-lg">Stockout Risk</h2>
@@ -401,6 +406,74 @@ export function SkuDetailPanel({ skuId }: Props) {
             </div>
           ) : (
             <p className="mt-4 text-sm text-slate-500">No reorder signal data available.</p>
+          )}
+        </div>
+
+        {/* Demand Anomalies */}
+        <div className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-md backdrop-blur">
+          <h2 className="font-heading text-lg">Demand Anomalies</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Last 30 days vs historical baseline</p>
+          {loading ? (
+            <div className="mt-4 space-y-2">
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+          ) : anomalies ? (
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className={`rounded-full px-3 py-0.5 text-sm font-semibold ${
+                  anomalies.anomaly_count === 0
+                    ? "bg-emerald-100 text-emerald-700"
+                    : anomalies.anomaly_count <= 2
+                    ? "bg-amber-100 text-amber-700"
+                    : "bg-rose-100 text-rose-700"
+                }`}>
+                  {anomalies.anomaly_count} anomal{anomalies.anomaly_count === 1 ? "y" : "ies"}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Baseline Mean</p>
+                  <p className="font-bold text-slate-900">{anomalies.baseline_mean.toFixed(1)} units/day</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Baseline Std Dev</p>
+                  <p className="font-bold text-slate-900">±{anomalies.baseline_std.toFixed(1)}</p>
+                </div>
+              </div>
+              {anomalies.anomalies.length === 0 ? (
+                <p className="text-sm text-slate-500">No significant demand anomalies detected.</p>
+              ) : (
+                <div className="space-y-2">
+                  {anomalies.anomalies.slice(0, 4).map((a) => (
+                    <div key={a.date} className={`rounded-xl p-3 text-xs ${
+                      a.severity === "HIGH"
+                        ? "bg-rose-50 border border-rose-200"
+                        : a.severity === "MEDIUM"
+                        ? "bg-amber-50 border border-amber-200"
+                        : "bg-slate-50 border border-slate-200"
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-slate-700">{a.date}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          a.severity === "HIGH"
+                            ? "bg-rose-100 text-rose-700"
+                            : a.severity === "MEDIUM"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-slate-100 text-slate-700"
+                        }`}>{a.severity}</span>
+                      </div>
+                      <div className="mt-1 flex gap-3 text-slate-600">
+                        <span>Demand: <span className="font-semibold">{a.demand_qty}</span></span>
+                        <span>Z-score: <span className="font-semibold">{a.z_score}</span></span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-slate-500">No anomaly data available.</p>
           )}
         </div>
       </div>

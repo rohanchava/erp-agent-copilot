@@ -81,6 +81,51 @@ class MLPredictor:
             ],
         }
 
+    def demand_anomaly_scan(self, sku_id: str, days: int = 30, z_threshold: float = 2.0) -> dict[str, Any]:
+        if self.store.inventory_row(sku_id) is None:
+            return {"error": f"Unknown sku_id: {sku_id}"}
+
+        hist = self.store.inventory_history[self.store.inventory_history["sku_id"] == sku_id].copy()
+        if hist.empty or len(hist) < 7:
+            return {"sku_id": sku_id, "window_days": days, "z_threshold": z_threshold,
+                    "baseline_mean": 0.0, "baseline_std": 0.0, "anomaly_count": 0, "anomalies": []}
+
+        baseline_mean = float(hist["demand_qty"].mean())
+        baseline_std = float(hist["demand_qty"].std())
+
+        if baseline_std == 0:
+            return {"sku_id": sku_id, "window_days": days, "z_threshold": z_threshold,
+                    "baseline_mean": round(baseline_mean, 2), "baseline_std": 0.0,
+                    "anomaly_count": 0, "anomalies": []}
+
+        cutoff = self.store._window_start(days)
+        recent = hist[hist["date"] >= cutoff].copy()
+        recent["z_score"] = ((recent["demand_qty"] - baseline_mean) / baseline_std).abs()
+        anomalies = recent[recent["z_score"] >= z_threshold].sort_values("z_score", ascending=False)
+
+        def severity(z: float) -> str:
+            return "HIGH" if z >= 3.0 else "MEDIUM" if z >= 2.0 else "LOW"
+
+        return {
+            "sku_id": sku_id,
+            "window_days": days,
+            "z_threshold": z_threshold,
+            "baseline_mean": round(baseline_mean, 2),
+            "baseline_std": round(baseline_std, 2),
+            "anomaly_count": len(anomalies),
+            "anomalies": [
+                {
+                    "date": row["date"].strftime("%Y-%m-%d"),
+                    "demand_qty": round(float(row["demand_qty"]), 2),
+                    "mean_demand": round(baseline_mean, 2),
+                    "std_demand": round(baseline_std, 2),
+                    "z_score": round(float(row["z_score"]), 2),
+                    "severity": severity(float(row["z_score"])),
+                }
+                for _, row in anomalies.iterrows()
+            ],
+        }
+
     def delay_risk(self, order_id: str) -> dict[str, Any]:
         row = self.store.order_row(order_id)
         if row is None:
