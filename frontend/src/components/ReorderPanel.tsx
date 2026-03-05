@@ -67,7 +67,7 @@ export function ReorderPanel({ recommendations }: Props) {
     }
   }
 
-  const maxUrgency = Math.max(...recommendations.map((r) => Math.abs(r.urgency_score)), 1);
+  const maxUrgency = recommendations.length > 0 ? Math.max(...recommendations.map((r) => Math.abs(r.urgency_score)), 1) : 1;
 
   return (
     <section className="space-y-5">

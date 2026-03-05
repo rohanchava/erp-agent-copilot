@@ -69,7 +69,7 @@ function TraceCard({ trace, index }: { trace: Trace; index: number }) {
 }
 
 export function CopilotPanel() {
-  const [question, setQuestion] = useState("Which suppliers are most delayed?");
+  const [question, setQuestion] = useState("");
   const [intent, setIntent] = useState<string>("");
   const [answer, setAnswer] = useState<string>("");
   const [traces, setTraces] = useState<Trace[]>([]);
@@ -85,7 +85,7 @@ export function CopilotPanel() {
       const res = await agentChat(question);
       setIntent(res.intent);
       setAnswer(res.answer);
-      setTraces((res.traces ?? []) as Trace[]);
+      setTraces((Array.isArray(res.traces) ? res.traces : []) as Trace[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -118,15 +118,16 @@ export function CopilotPanel() {
           <input
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            className="flex-1 rounded-xl border border-sky/30 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky/40"
-            placeholder="Ask something operational..."
+            disabled={loading}
+            className="flex-1 rounded-xl border border-sky/30 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky/40 disabled:opacity-60"
+            placeholder="Ask something operational…"
           />
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !question.trim()}
             className="rounded-xl bg-sky px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
           >
-            Ask
+            {loading ? "Thinking…" : "Ask"}
           </button>
         </form>
 
@@ -136,29 +137,18 @@ export function CopilotPanel() {
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Answer</p>
               {intent && (
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                    intent === "inventory_lookup"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : intent === "kpi_summary"
-                        ? "bg-blue-100 text-blue-700"
-                        : intent === "stockout_risk"
-                          ? "bg-amber-100 text-amber-800"
-                          : intent === "delay_risk"
-                            ? "bg-rose-100 text-rose-700"
-                            : intent === "supplier_delivery_analysis"
-                              ? "bg-violet-100 text-violet-700"
-                              : intent === "warehouse_risk"
-                                ? "bg-fuchsia-100 text-fuchsia-700"
-                                : intent === "trend_forecast"
-                                  ? "bg-orange-100 text-orange-700"
-                                  : intent === "stock_performance"
-                                    ? "bg-cyan-100 text-cyan-700"
-                                    : intent === "anomaly_detection"
-                                      ? "bg-red-100 text-red-700"
-                                      : intent === "improvement_priorities"
-                                        ? "bg-indigo-100 text-indigo-700"
-                            : "bg-slate-200 text-slate-700"
-                  }`}
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${{
+                    inventory_lookup: "bg-emerald-100 text-emerald-700",
+                    kpi_summary: "bg-blue-100 text-blue-700",
+                    stockout_risk: "bg-amber-100 text-amber-800",
+                    delay_risk: "bg-rose-100 text-rose-700",
+                    supplier_delivery_analysis: "bg-violet-100 text-violet-700",
+                    warehouse_risk: "bg-fuchsia-100 text-fuchsia-700",
+                    trend_forecast: "bg-orange-100 text-orange-700",
+                    stock_performance: "bg-cyan-100 text-cyan-700",
+                    anomaly_detection: "bg-red-100 text-red-700",
+                    improvement_priorities: "bg-indigo-100 text-indigo-700",
+                  }[intent] ?? "bg-slate-200 text-slate-700"}`}
                 >
                   {titleCase(intent)}
                 </span>
@@ -187,7 +177,7 @@ export function CopilotPanel() {
           disabled={loading}
           className="mt-4 w-full rounded-xl bg-pulse px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60"
         >
-          Predict Stockout (SKU-1000)
+          {loading ? "Predicting…" : "Predict Stockout (SKU-1000)"}
         </button>
 
         {prediction && (

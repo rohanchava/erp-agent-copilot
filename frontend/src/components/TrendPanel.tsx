@@ -3,65 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { fetchSkus, fetchStockTrend, ScenarioResponse, SkuRecord, StockTrendResponse, simulateStockScenario } from "@/lib/api";
+import { buildPath, chartSeries, splitChart } from "@/lib/chartHelpers";
 
 const HISTORY_WINDOWS = [30, 60, 90, 120];
 const FORECAST_WINDOWS = [14, 21, 30];
-
-function buildPath(points: Array<{ x: number; y: number }>): string {
-  if (points.length === 0) return "";
-  return points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
-}
-
-function chartSeries(values: number[], width: number, height: number, yMin: number, yMax: number) {
-  const safeRange = Math.max(yMax - yMin, 1);
-  return values.map((v, idx) => {
-    const x = (idx / Math.max(values.length - 1, 1)) * width;
-    const y = height - ((v - yMin) / safeRange) * height;
-    return { x, y };
-  });
-}
-
-function splitChart(
-  trend: StockTrendResponse,
-  metric: "on_hand" | "demand",
-  scenarioForecast?: number[]
-): {
-  width: number;
-  height: number;
-  historyPath: string;
-  forecastPath: string;
-  scenarioPath: string;
-  boundaryX: number;
-} {
-  const width = 740;
-  const height = 220;
-
-  const histValues =
-    metric === "on_hand" ? trend.history.map((p) => p.on_hand) : trend.history.map((p) => Number(p.demand_qty ?? 0));
-  const fcstValues =
-    metric === "on_hand"
-      ? trend.forecast.map((p) => p.on_hand)
-      : trend.forecast.map((p) => Number(p.predicted_demand ?? 0));
-
-  const merged = scenarioForecast ? [...histValues, ...fcstValues, ...scenarioForecast] : [...histValues, ...fcstValues];
-  const yMin = Math.min(...merged) * 0.9;
-  const yMax = Math.max(...merged) * 1.1;
-
-  const historyPts = chartSeries(histValues, width, height, yMin, yMax);
-  const historyPath = buildPath(historyPts);
-  const boundaryX = historyPts[historyPts.length - 1]?.x ?? 0;
-
-  const fcstPts = chartSeries(fcstValues, width * 0.24, height, yMin, yMax).map((p) => ({ x: p.x + boundaryX, y: p.y }));
-  const forecastPath = buildPath(fcstPts);
-
-  const scenarioPath = scenarioForecast
-    ? buildPath(
-        chartSeries(scenarioForecast, width * 0.24, height, yMin, yMax).map((p) => ({ x: p.x + boundaryX, y: p.y }))
-      )
-    : "";
-
-  return { width, height, historyPath, forecastPath, scenarioPath, boundaryX };
-}
 
 export function TrendPanel() {
   const [skus, setSkus] = useState<SkuRecord[]>([]);
@@ -242,7 +187,12 @@ export function TrendPanel() {
         </div>
       </div>
 
-      {loading && <p className="mt-3 text-sm text-slate-600">Loading trend...</p>}
+      {loading && (
+        <div className="mt-4 space-y-3">
+          <div className="animate-pulse h-56 rounded-2xl bg-slate-200" />
+          <div className="animate-pulse h-40 rounded-2xl bg-slate-100" />
+        </div>
+      )}
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
 
       {trend && stockChart && demandChart && (
