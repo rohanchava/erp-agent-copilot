@@ -33,7 +33,7 @@ Designed as a learning project for full-stack ML applications.
 | `/trends` | Inventory trends + what-if simulator |
 | `/anomalies` | Demand spikes, stock drops, supplier risk |
 | `/reorders` | ROP-based reorder recommendations table |
-| `/skus` | SKU catalog with search |
+| `/skus` | SKU catalog with search (links to detail page) |
 | `/skus/[sku_id]` | Per-SKU detail: trend, stockout risk, reorder signal, scenario sim |
 | `/copilot` | AI copilot chat with tool traces |
 

@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const NAV_ITEMS = [
-  { href: "/", label: "Overview" },
+const NAV_ITEMS: { href: string; label: string; exact?: boolean }[] = [
+  { href: "/", label: "Overview", exact: true },
   { href: "/trends", label: "Trends" },
   { href: "/anomalies", label: "Anomalies" },
   { href: "/reorders", label: "Reorders" },
+  { href: "/skus", label: "SKUs" },
   { href: "/copilot", label: "Copilot" },
 ];
 
@@ -23,7 +24,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <nav className="mt-5 space-y-1">
             {NAV_ITEMS.map((item) => {
-              const active = pathname === item.href;
+              const active = item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(item.href + "/");
               return (
                 <Link
                   key={item.href}
@@ -56,7 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               <div className="flex flex-wrap gap-2 lg:hidden">
                 {NAV_ITEMS.map((item) => {
-                  const active = pathname === item.href;
+                  const active = item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(item.href + "/");
                   return (
                     <Link
                       key={item.href}
