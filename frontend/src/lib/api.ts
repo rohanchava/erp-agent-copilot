@@ -152,6 +152,36 @@ export async function agentChat(
   return r.json();
 }
 
+export type ReorderRecommendation = {
+  sku_id: string;
+  sku_name: string;
+  on_hand: number;
+  daily_demand: number;
+  lead_time_days: number;
+  demand_std: number;
+  safety_stock: number;
+  rop: number;
+  reorder_qty: number;
+  days_to_reorder: number;
+  suggested_order_date: string;
+  status: "REORDER_NOW" | "REORDER_SOON" | "OK";
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+  urgency_score: number;
+};
+
+export async function fetchReorderRecommendations(
+  limit?: number,
+  statusFilter?: string
+): Promise<ReorderRecommendation[]> {
+  const params = new URLSearchParams();
+  if (limit != null) params.set("limit", String(limit));
+  if (statusFilter) params.set("status_filter", statusFilter);
+  const query = params.toString() ? `?${params.toString()}` : "";
+  const r = await fetch(`${API_BASE}/recommendations/reorder${query}`, { cache: "no-store" });
+  if (!r.ok) throw new Error("Failed to fetch reorder recommendations");
+  return r.json();
+}
+
 export async function stockoutPredict(skuId: string, horizonDays: number) {
   const r = await fetch(`${API_BASE}/predict/stockout`, {
     method: "POST",

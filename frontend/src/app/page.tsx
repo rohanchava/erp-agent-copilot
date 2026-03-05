@@ -12,7 +12,7 @@ export default async function OverviewPage() {
       <Dashboard kpis={kpis} />
       <OverviewInsights />
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Link
           href="/trends"
           className="group rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
@@ -41,6 +41,16 @@ export default async function OverviewPage() {
           <h3 className="mt-1 font-heading text-lg text-slate-900">AI Copilot Chat</h3>
           <p className="mt-2 text-sm text-slate-600">Ask natural-language ERP questions with traces.</p>
           <p className="mt-4 text-sm font-semibold text-violet-700 group-hover:text-violet-600">Open Copilot</p>
+        </Link>
+
+        <Link
+          href="/reorders"
+          className="group rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+        >
+          <p className="text-xs uppercase tracking-wide text-slate-500">Replenishment</p>
+          <h3 className="mt-1 font-heading text-lg text-slate-900">Reorder Signals</h3>
+          <p className="mt-2 text-sm text-slate-600">ROP-based reorder recommendations with safety stock and order dates.</p>
+          <p className="mt-4 text-sm font-semibold text-amber-700 group-hover:text-amber-600">Open Reorders</p>
         </Link>
       </section>
     </div>

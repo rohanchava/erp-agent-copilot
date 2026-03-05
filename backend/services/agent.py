@@ -210,6 +210,21 @@ def _rule_based_answer(question: str, store: ERPStore, ml: MLPredictor) -> dict[
             "traces": traces,
         }
 
+    if any(kw in q for kw in ("reorder", "replenish", "order now", "when should i order")):
+        recs = store.reorder_recommendations(limit=5, status_filter="REORDER_NOW")
+        traces.append({"tool": "reorder_recommendations", "input": {"limit": 5, "status_filter": "REORDER_NOW"}, "output": recs})
+        if not recs:
+            return {"intent": "reorder_recommendations", "answer": "No items currently need reordering.", "traces": traces}
+        summary = "; ".join(
+            f"{r['sku_id']} ({r['sku_name']}) — order {int(r['reorder_qty'])} units by {r['suggested_order_date']}"
+            for r in recs
+        )
+        return {
+            "intent": "reorder_recommendations",
+            "answer": f"Top {len(recs)} items to reorder now: {summary}.",
+            "traces": traces,
+        }
+
     if "stockout" in q or "low stock" in q or ("risk" in q and "delay" not in q):
         candidates = store.top_stockout_candidates(limit=3)
         traces.append({"tool": "top_stockout_candidates", "input": {"limit": 3}, "output": candidates})

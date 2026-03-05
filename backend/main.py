@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -141,6 +141,14 @@ def simulate_stock(payload: ScenarioRequest) -> dict[str, Any]:
         lead_time_multiplier=payload.lead_time_multiplier,
         replenishment_multiplier=payload.replenishment_multiplier,
     )
+
+
+@app.get("/recommendations/reorder")
+def reorder_recommendations(
+    limit: Optional[int] = Query(default=None, ge=1, le=200),
+    status_filter: Optional[str] = Query(default=None, pattern="^(REORDER_NOW|REORDER_SOON|OK)$"),
+) -> list[dict[str, Any]]:
+    return store.reorder_recommendations(limit=limit, status_filter=status_filter)
 
 
 @app.post("/agent/chat", response_model=ChatResponse)

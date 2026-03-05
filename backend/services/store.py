@@ -385,6 +385,82 @@ class ERPStore:
         rows = rows.sort_values("date").tail(days)
         return rows[["date", "sku_id", "demand_qty", "on_hand"]]
 
+    def reorder_recommendations(
+        self, limit: int | None = None, status_filter: str | None = None
+    ) -> list[dict[str, Any]]:
+        today = pd.Timestamp.today().normalize()
+        cutoff = today - pd.Timedelta(days=30)
+
+        recent = self.inventory_history[self.inventory_history["date"] >= cutoff].copy()
+        demand_stats = (
+            recent.groupby("sku_id")
+            .agg(demand_std=("demand_qty", "std"))
+            .reset_index()
+        )
+        demand_stats["demand_std"] = demand_stats["demand_std"].fillna(0.0)
+
+        df = self.inventory.merge(demand_stats, on="sku_id", how="left")
+        df["demand_std"] = df["demand_std"].fillna(0.0)
+
+        results: list[dict[str, Any]] = []
+        for _, row in df.iterrows():
+            daily_demand = float(row["daily_demand"])
+            lead_time = float(row["lead_time_days"])
+            on_hand = float(row["on_hand"])
+            demand_std = float(row["demand_std"])
+
+            safety_stock = 1.65 * demand_std * (lead_time ** 0.5)
+            rop = (daily_demand * lead_time) + safety_stock
+            reorder_qty = daily_demand * (lead_time + 14)
+
+            denom = max(daily_demand, 0.001)
+            days_to_reorder = max(0.0, (on_hand - rop) / denom)
+            suggested_order_date = today + pd.Timedelta(days=days_to_reorder)
+
+            if on_hand <= rop:
+                status = "REORDER_NOW"
+            elif on_hand <= rop + (daily_demand * 7):
+                status = "REORDER_SOON"
+            else:
+                status = "OK"
+
+            cv = demand_std / max(daily_demand, 0.001)
+            if cv < 0.15:
+                confidence = "HIGH"
+            elif cv < 0.30:
+                confidence = "MEDIUM"
+            else:
+                confidence = "LOW"
+
+            urgency_score = (rop - on_hand) / denom
+
+            results.append({
+                "sku_id": row["sku_id"],
+                "sku_name": row["sku_name"],
+                "on_hand": int(on_hand),
+                "daily_demand": round(daily_demand, 2),
+                "lead_time_days": int(lead_time),
+                "demand_std": round(demand_std, 2),
+                "safety_stock": round(safety_stock, 1),
+                "rop": round(rop, 1),
+                "reorder_qty": round(reorder_qty, 0),
+                "days_to_reorder": round(days_to_reorder, 1),
+                "suggested_order_date": suggested_order_date.strftime("%Y-%m-%d"),
+                "status": status,
+                "confidence": confidence,
+                "urgency_score": round(urgency_score, 4),
+            })
+
+        results.sort(key=lambda x: x["urgency_score"], reverse=True)
+
+        if status_filter:
+            results = [r for r in results if r["status"] == status_filter]
+
+        if limit is not None:
+            results = results[:limit]
+
+        return results
+
     def order_row(self, order_id: str) -> pd.Series | None:
         rows = self.orders[self.orders["order_id"] == order_id]
         if rows.empty:

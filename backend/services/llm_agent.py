@@ -127,6 +127,20 @@ def _tool_schemas() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
+                "name": "get_reorder_recommendations",
+                "description": "Return reorder recommendations for SKUs based on the ROP formula.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "limit": {"type": "integer", "minimum": 1, "maximum": 200},
+                        "status_filter": {"type": "string", "enum": ["REORDER_NOW", "REORDER_SOON", "OK"]},
+                    },
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "simulate_stock_scenario",
                 "description": "Run what-if simulation with demand/lead-time/replenishment multipliers.",
                 "parameters": {
@@ -157,6 +171,7 @@ def _intent_from_tool(tool_name: str) -> str:
         "get_warehouse_risk": "warehouse_risk",
         "get_stock_trend": "trend_forecast",
         "simulate_stock_scenario": "scenario_simulation",
+        "get_reorder_recommendations": "reorder_recommendations",
     }
     return mapping.get(tool_name, "llm_tooling")
 
@@ -196,6 +211,11 @@ def answer_with_llm_tools(question: str, store: ERPStore, ml: MLPredictor) -> di
                 sku_id=args.get("sku_id", "").upper(),
                 history_days=int(args.get("history_days", 60)),
                 forecast_days=int(args.get("forecast_days", 14)),
+            )
+        if name == "get_reorder_recommendations":
+            return store.reorder_recommendations(
+                limit=args.get("limit"),
+                status_filter=args.get("status_filter"),
             )
         if name == "simulate_stock_scenario":
             return ml.simulate_stock_scenario(
