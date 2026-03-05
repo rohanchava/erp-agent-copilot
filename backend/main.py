@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -18,7 +18,7 @@ app = FastAPI(title="ERP Copilot API", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -78,6 +78,22 @@ def get_stock_trend(
     forecast_days: int = Query(default=14, ge=7, le=60),
 ) -> dict[str, Any]:
     return ml.stock_trend_with_forecast(sku_id.upper(), history_days=history_days, forecast_days=forecast_days)
+
+
+@app.get("/skus/{sku_id}/profile")
+def sku_profile(sku_id: str) -> dict[str, Any]:
+    sku = sku_id.upper()
+    inv = store.inventory_row(sku)
+    if inv is None:
+        raise HTTPException(status_code=404, detail=f"Unknown SKU: {sku}")
+    perf = store.stock_performance(sku, days=30) or {}
+    rec = next((r for r in store.reorder_recommendations() if r["sku_id"] == sku), None)
+    return {
+        "sku_id": sku, "sku_name": str(inv["sku_name"]),
+        "on_hand": int(inv["on_hand"]), "daily_demand": float(inv["daily_demand"]),
+        "lead_time_days": int(inv["lead_time_days"]), "days_of_cover": float(inv["days_of_cover"]),
+        "performance": perf, "reorder": rec,
+    }
 
 
 @app.get("/analytics/suppliers")

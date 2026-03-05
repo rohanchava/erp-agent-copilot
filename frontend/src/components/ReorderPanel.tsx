@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ReorderRecommendation } from "@/lib/api";
 
 type Props = {
@@ -174,7 +175,9 @@ export function ReorderPanel({ recommendations }: Props) {
 
                 return (
                   <tr key={r.sku_id} className="hover:bg-slate-50">
-                    <td className="py-2 pr-3 font-mono text-xs text-slate-700">{r.sku_id}</td>
+                    <td className="py-2 pr-3 font-mono text-xs text-slate-700">
+                      <Link href={`/skus/${r.sku_id}`} className="text-cyan-700 hover:underline">{r.sku_id}</Link>
+                    </td>
                     <td className="py-2 pr-3 text-slate-800">{r.sku_name}</td>
                     <td className="py-2 pr-3 text-slate-700">{r.on_hand.toLocaleString()}</td>
                     <td className="py-2 pr-3 text-slate-700">{r.rop.toLocaleString()}</td>

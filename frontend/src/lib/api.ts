@@ -182,6 +182,20 @@ export async function fetchReorderRecommendations(
   return r.json();
 }
 
+export type SkuProfile = {
+  sku_id: string; sku_name: string;
+  on_hand: number; daily_demand: number;
+  lead_time_days: number; days_of_cover: number;
+  performance: Record<string, number> | null;
+  reorder: ReorderRecommendation | null;
+};
+
+export async function fetchSkuProfile(skuId: string): Promise<SkuProfile> {
+  const r = await fetch(`${API_BASE}/skus/${encodeURIComponent(skuId)}/profile`, { cache: "no-store" });
+  if (!r.ok) throw new Error(`SKU not found: ${skuId}`);
+  return r.json();
+}
+
 export async function stockoutPredict(skuId: string, horizonDays: number) {
   const r = await fetch(`${API_BASE}/predict/stockout`, {
     method: "POST",
